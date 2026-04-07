@@ -14,16 +14,8 @@ function App() {
       <Header/>
 
       <Routes>
-        <Route path='/' element={<MainPage />} />
+        <Route path='/home' element={<MainPage />} />
       </Routes>
-      <h1>test</h1>
-      <h1>test</h1>
-      <h1>test</h1>
-      <h1>test</h1>
-      <h1>test</h1>
-      <h1>test</h1>
-      <h1>test</h1>
-      <h1>test</h1>
       
       <Footer/>
 

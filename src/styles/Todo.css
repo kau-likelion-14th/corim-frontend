@@ -1,0 +1,229 @@
+.checkbox.checked::after {
+  content: '✓';
+}
+
+.checkbox{
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    margin-right: 16px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0;
+}
+
+.todo-title{
+    font-size: 28px;
+    font-weight: 800;
+    color: #333;
+}
+
+.todo-item{
+    display: flex;
+    align-items: center;
+    background: #fff;
+    padding: 16px;
+    cursor: pointer;
+}
+
+
+
+.todo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.todo-text {
+    flex: 1;
+    font-size: 16px;
+    color: #333;
+    align-self: center;
+}
+
+.todo-add {
+    background: none;
+    border: none;
+    font-size: 32px;
+    font-weight: 300;
+    cursor: pointer;
+    color: #333;
+}
+
+
+.modal-overlay {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.2);
+  z-index: 9999;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px; /* 항목 사이 간격 */
+}
+
+.modal-container {
+  box-sizing:border-box;
+  background: #ffffff;
+  width: 440px;
+  padding: 36px;
+  border-radius: 20px;
+  box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.1);
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.date-input {
+  cursor:pointer;
+  padding: 10px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-family: 'Paperlogy', sans-serif;
+  color: #333;
+}
+
+.date-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.modal-title{
+    font-size: 20px;
+    font-weight: 700;
+    text-align: center;
+    color: #333;
+}
+
+.modal-section{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.modal-label{
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+}
+
+.text-input{
+    width: 100%;
+    padding: 16px;
+    border: none;
+    background-color: #f1f1f1;
+    border-radius: 10px;
+    font-size: 14px;
+    box-sizing: border-box;
+    font-family: 'Paperlogy', sans-serif;
+    outline: none;
+}
+
+.routine-row{
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+    background-color: #fff;
+    margin-top: 10px;
+}
+
+.routine-label { font-size: 14px; font-weight: 500; }
+.routine-button { font-size: 18px; color: #888; }
+
+.modal-actions{
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.leftbutton, .leftbutton2{
+    flex: 1;
+    padding: 14px;
+    background: white;
+    border: 1px solid #FF6B4A;
+    color: #FF6B4A;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.rightbutton{
+    flex:1;
+    padding: 14px;
+    background: #6179F2;
+    border: none;
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.rightbutton:disabled, .rightbutton.disabled {
+    background: #cccccc;
+    cursor: not-allowed;
+}
+
+.modal-categories {
+    display: flex;
+    justify-content: space-around;
+    width: 100%; 
+    margin-top: 10px;
+}
+
+.modal-categoryitem, .modal-categories label {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+}
+
+.input-wrapper {
+    width: 100%;
+}
+
+.routine-header {
+    display: flex;
+    align-items: center;
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.routine-close {
+    position: absolute;
+    left: 0;
+    cursor: pointer;
+    font-size: 24px;
+    color: #333;
+}
+
+.routine-title {
+    width: 100%;
+    text-align: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
+
