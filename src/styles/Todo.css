@@ -1,21 +1,27 @@
 .checkbox.checked::after {
-  content: '✓';
+    content: '✔';
+    color: white;
+    font-size: 14px;
 }
 
 .checkbox{
     width: 24px;
     height: 24px;
     flex-shrink: 0;
-    border: 2px solid #ccc;
-    border-radius: 6px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
     background: transparent;
     cursor: pointer;
     margin-right: 16px;
-
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 0;
+}
+
+.checkbox.checked{
+    background-color: #6179F2;
+    border-color: #6179F2;
 }
 
 .todo-title{
@@ -28,16 +34,34 @@
     display: flex;
     align-items: center;
     background: #fff;
-    padding: 16px;
+    padding: 16px 20px;
     cursor: pointer;
+    border-radius: 16px;
+    box-shadow: 0px 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
+.todo-category{
+    width: 72px;
+    text-align: center;
+    padding: 6px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    flex-shrink: 0;
+}
 
+.todo-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.08);
+}
 
 .todo-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 24px;
 }
 
 .todo-text {
@@ -45,6 +69,7 @@
     font-size: 16px;
     color: #333;
     align-self: center;
+    font-weight: 500;
 }
 
 .todo-add {
@@ -71,7 +96,7 @@
 .todo-list {
     display: flex;
     flex-direction: column;
-    gap: 16px; /* 항목 사이 간격 */
+    gap: 16px;
 }
 
 .modal-container {
