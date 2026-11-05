@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-
+import React, { useEffect, useState } from "react";
+import {  useNavigate, useParams } from "react-router-dom";
+import api from "../../Api";
+import config from "../../Config"
 import FriendCalendar from "./FriendCalendar";
 import FriendTodo from "./FriendTodo";
 
@@ -19,68 +20,114 @@ const toDateKey = (date) => { // date 객체를 받아서 "YYYY-MM-DD" 형태의
   return `${y}-${m}-${d}`;
 };
 
-const dummyFriend = {
-  followId: "1",
-  name: "나나",
-  tag: "1234",
-  bio: "안녕하세요! 저는 나나입니다.",
-  profileImage: null,
-};
+function useFriendResource(url, params, validate, retry){
+  const [state, setState] = useState({loading:true, error:"", value:null});
+  const query = JSON.stringify(params);
 
-const dummySavedSongs = [
-  {
-    id: 1,
-    title: "Ditto",
-    artist: "NewJeans",
-    imageUrl: null,
-  },
-];
+  useEffect(() => {
+    let active = true;
+    const controller = new AbortController();
 
-const dummyTodosByDate = {
-  "2026-05-04": [
-    { id: 1, text: "프론트 보충자료 읽기", category: "공부", completed: true },
-    { id: 2, text: "FriendDetailPage 주석 달기", category: "공부", completed: false },
-  ],
-  "2026-05-06": [
-    { id: 3, text: "친구 페이지 과제 제출", category: "동아리", completed: true },
-  ],
-  "2026-05-10": [
-    { id: 4, text: "React 복습하기", category: "공부", completed: false },
-    { id: 5, text: "동아리 회의", category: "동아리", completed: false },
-    { id: 6, text: "산책하기", category: "일상", completed: true },
-  ],
-};
+    setState({loading:true, error: "", value: null});
 
-const dummyRemainingByDate = {
-  "2026-05-04": { hasTodo: true, remaining: 1 },
-  "2026-05-06": { hasTodo: true, remaining: 0 },
-  "2026-05-10": { hasTodo: true, remaining: 2 },
-};
+    api.get(url, {params:JSON.parse(query), signal:controller.signal})
+    .then(({data}) => {
+      if(data?.isSuccess === false || !validate(data?.result)){
+        throw new Error("잘못된 응답");
+      }
+      if(active){
+        setState({loading:false, error:"", value:data?.result});
+      }
+    })
+    .catch(() => {
+      if(active){
+        setState({loading: false, error:"데이터를 불러오지 못했습니다.", value:null})
+      }
+    });
+    return() => {
+      active = false;
+      controller.abort();
+    };
+
+  }, [url, query, validate, retry]);
+  return state;
+}
+
+const validProfile = (value) => typeof value?.username === "string";
+
+const validTodos = (value) =>
+  Array.isArray(value) &&
+value.every((todo) =>
+todo?.todoId != null &&
+typeof todo.description === "string" &&
+typeof todo.completed === "boolean");
+
+const validCalenddar = (value) =>
+  Array.isArray(value?.days) &&
+  value.days.every((day) =>
+    typeof day?.date === "string" &&
+    typeof day?.hasTodo === "boolean" &&
+    Number.isFinite(day.remaining)
+  );
+
+
+function ResourceState({resource, onRetry}){
+  if(resource.loading){
+    return <p role="status">불러오는 중...</p>
+  }
+  if(resource.error){
+    return(
+      <div>
+        <p  role="alert">
+          {resource.error}
+        </p>
+        <button onClick={onRetry}>다시 시도</button>
+      </div>
+    );
+  }
+  return null;
+}
 
 function FriendDetailPage() {
   const navigate = useNavigate();
-  const location = useLocation(); // 이전 페이지에서 navigate 함수를 통해 화면을 넘어올때 숨겨서 보낸 state 보따리를 꺼내기 위해 사용함
+  
+  const {id} = useParams();
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [viewDate, setViewDate] = useState(()=>new Date());
+  const [retries, setRtries] = useState({profile:0, todos:0, calendar:0});
+  const retry = (key) => setRtries((prev) => ({...prev, [key]: prev[key] + 1}));
 
-  const passedFriend = location.state?.friend ?? null; // 이전 페이지에서 넘겨준 friend 데이터 객체가 있으면 꺼내고 없으면 null 저장
+  const base = config.FOLLOW.PROFILE(id);
+  const profile = useFriendResource(base, {}, validProfile, retries.profile);
+  const todoResource = useFriendResource(
+    config.FOLLOW.TODOS(id),
+  { date: toDateKey(selectedDate) },
+  validTodos,
+  retries.todos
+  );
 
-  const [friend] = useState(passedFriend ?? dummyFriend); // 화면에 띄울 친구 정보 스테이트, 전달받은 데이터가 있으면 쓰고 없으면 화면이 깨지지 않게 미리 만들어둔 dummyfriend를 기본값으로 세팅
-  const [savedSongs] = useState(dummySavedSongs);
+  const friend = profile.value ? {
+    name : profile.value.username.split("#")[0],
+    bio : profile.value.introduction,
+    profileIamge : profile.value.profileImageUrl,
+  }: null;
 
-  const [selectedDate, setSelectedDate] = useState(new Date("2026-05-04")); // 달력에서 사용자가 마우스로 클릭한 날짜는 저장하는 스테이트, 이 값이 바뀌면 하단의 투두 리스트 화면이 해당 날짜 데이터로 바뀜
-  const [viewDate, setViewDate] = useState(new Date("2026-05-04"));
+  const todos = (todoResource.value || []).map ((todo) =>({
+    id: todo.todoId,
+    text: todo.description,
+    category: todo.categoryName,
+    completed : todo.completed,
+  }));
 
-  const [todosByDate] = useState(dummyTodosByDate); // 전체 날짜별 투두 데이터를 가지고 있는 스테이드
-  const [remainingByDate] = useState(dummyRemainingByDate);
-
-  const latestSong = useMemo(() => { // 저장된 노래 배열이 바뀔 때만 배열의 0번째 곡 데이터를 뽑아냄, 매번 계산하지 않고 값을 기억해둠
-    if (!Array.isArray(savedSongs) || savedSongs.length === 0) return null;
-    return savedSongs[0];
-  }, [savedSongs]);
-
-  const todos = useMemo(() => { // selecteddate state가 바뀔 때마다 전체 투두 데이터에서 해당 날짜를 key로 검색해 그 날의 할 일 배열만 쏙 뽑아냄
-    const key = toDateKey(selectedDate);
-    return todosByDate[key] ?? []; // 만약 해당 날짜에 데이터가 아예 없으면 빈 배열을 반환해 화면에 에러 대신 빈 목록이 뜨게함
-  }, [selectedDate, todosByDate]);
+  const calendar = useFriendResource(
+    config.FOLLOW.CALENDAR(id),
+    {year: viewDate.getFullYear(), month: viewDate.getMonth() +1},
+    validCalenddar,
+    retries.calendar
+  );
+  const remainingByDate = Object.fromEntries(
+    (calendar.value?.days || []).map((day) => [day.date, day])
+  );
 
   return ( // 화면에 띄울 요소들
     <div className="friend-detail-page">
@@ -124,44 +171,11 @@ function FriendDetailPage() {
               </div>
             </div>
           </div>
-
-          <div className="friend-detail-page__songs-inline">
-            {latestSong ? ( // usememo로 걸러낸 노래 데이터가 존재하면 노래 정보 ui를 화면에 글리고 없으면 '저장한 곡이 없습니다' 텍스를 렌더링
-              <div className="friend-detail-page__song-inline-item">
-                <div className="friend-detail-page__song-inline-cover">
-                  {latestSong?.imageUrl ? (
-                    <img
-                      src={latestSong.imageUrl}
-                      alt={latestSong.title || "album"}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        borderRadius: "10px",
-                      }}
-                    />
-                  ) : null}
-                </div>
-
-                <div className="friend-detail-page__song-inline-info">
-                  <div className="friend-detail-page__song-inline-title">
-                    {latestSong?.title || "제목 없음"}
-                  </div>
-                  <div className="friend-detail-page__song-inline-artist">
-                    {latestSong?.artist || "아티스트 정보 없음"}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="friend-detail-page__songs-inline-empty">
-                저장한 곡이 없습니다.
-              </div>
-            )}
-          </div>
+          <ResourceState resource={profile} onRetry={()=> retry("profile")}/>
         </div>
-
         <div className="friend-detail-page__grid">
           <div className="friend-detail-page__calendar">
+            <ResourceState resource={calendar} onRetry={()=> retry("calendar")}/>
             <FriendCalendar
               initialDate={selectedDate}
               onDateChange={(date) => date && setSelectedDate(date)} // 자식 컴포넌트에서 특정 날짜를 마우스로 클릭하면 이 함수가 실행되어 부모의 selectedDate state가 바뀜 > 전체 화면이 재렌더링되며 오른쪽 투두 리스트가 클릭한 날짜에 맞게 변경됨 
@@ -169,12 +183,12 @@ function FriendDetailPage() {
                 if (!date) return;
                 setViewDate(date);
               }}
-              todosByDate={todosByDate}
               remainingByDate={remainingByDate}
             />
           </div>
 
           <div className="friend-detail-page__todo">
+            <ResourceState resource={todoResource} onRetry={()=> retry("todos")}/>
             <FriendTodo
               title="To do List"
               todos={todos} // 위쪽의 usememo에서 뽑아낸 클릭된 날짜의 투두 배열을 자식에게 props로 넘겨주오 화면에 리스트를 그리게 함
