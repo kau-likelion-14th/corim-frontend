@@ -3,27 +3,8 @@ import React, { useMemo } from "react";
 import "../../styles/Todo.css";
 import "../../styles/FriendTodo.css";
 
-const dummyTodos = [ // 서버에서 받아올 투두 리스트 데이터를 임시로 만들어둔 배열
-  { id: 1, text: "프론트 보충자료 읽기", category: "공부", completed: true },
-  { id: 2, text: "FriendTodo 구현하기", category: "공부", completed: false },
-  { id: 3, text: "동아리 회의", category: "동아리", completed: false },
-];
-
-const dummyCategories = { // 각 카테고리별 화면에 칠해줄 배경색과 글자색 정보를 담고 있는 개체
-  공부: { backgroundColor: "#E5F8F1", color: "#333" },
-  일상: { backgroundColor: "#FFC8BE", color: "#333" },
-  동아리: { backgroundColor: "#B6DAFF", color: "#333" },
-};
-
-const FriendTodo = ({ title = "To do List" }) => { // 부모 컴포넌트에서 호출되어 화면 하단에 투두 리스트를 그려주는 역할, title 데이터를 props로 받아오며 부모가 값을 안 주면 to do list를 기본 텍스트로 화면에 띄움
-  const todos = dummyTodos; 
-  const categories = dummyCategories;
-
-  const counts = useMemo(() => { // 데이터 가공 및 최적화, 투두 리스트 데이터가 바뀔때마다 전체 할 일 개수와 완료된 일 개수를 계산함
-    const total = todos.length;
-    const done = todos.filter((t) => t.completed).length; // completed가 Ture인 데이터만 걸러서 개수 파악
-    return { total, done };
-  }, [todos]);
+const FriendTodo = ({title = "To do List", todos = [], categories = {} }) => {
+  
 
   return (
     <div className="friend-todo">

@@ -27,6 +27,7 @@ function App() {
           <Route path='/login' element={<LoginPage />}/>
           <Route path='/login/oauth2/code/kakao' element={<LoginPage />}/>
           <Route element={<ProtectedRoute />}>
+            <Route path="/home" element={<Navigate to="/" replace />} />
             <Route path="/" element={<MainPage/>} /> {/* 기본 화면이 로그인화면이 뜨게 */}
             <Route path='/mypage' element={<MyPage />}/>
             <Route path="/friends" element={<FriendPage />} />
