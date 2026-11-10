@@ -1,13 +1,56 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import profile from "../../assets/img/Profile.png";
+import { get, put, uploadProfile} from "../../Api";
+import config from "../../Config";
 
-function Profile() {
-    const [intro, setIntro] = useState(() => sessionStorage.getItem('intro') || '');
-    const [song, setSong] = useState(() => sessionStorage.getItem('song') || '');
-    const [previewUrl, setPreviewUrl] = useState(() => sessionStorage.getItem('previewUrl') || '');
-
+const Profile = () => {
     const fileInputRef = useRef(null);
-    const defaultProfileImg = profile;
+
+    const[nickname, setNickname] = useState("Likelion#1253");
+    const[intro,setIntro] = useState("안녕하세요");
+    const[song, setSong] = useState("내꺼하자 - 인피니트");
+
+    const[profileImageUrl, setProfileImageUrl] = useState(null);
+    const[previewUrl, setPreviewUrl] = useState(null); 
+
+    useEffect(() => {
+        fetchProfileData();
+    }, []);
+
+
+       const fetchProfileData = async () => {
+    try {
+        const response = await get(config.PROFILE.GET);
+        const result = response?.result;
+
+        console.log("프로필 데이터:", result);
+
+        if (!result) return;
+
+        setNickname(result.username ?? "");
+        setIntro(result.introduction ?? "");
+        setProfileImageUrl(result.profileImageUrl ?? null);
+
+        const songResponse = await get(config.YOUTUBE.ME);
+
+        if (
+            songResponse?.isSuccess === false ||
+            !Array.isArray(songResponse?.result)
+        ) {
+        throw new Error("저장된 노래 조회 실패");
+        }
+
+        const songs = [...songResponse.result].sort(
+        (a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt)
+        );
+
+        const latest = songs[0];
+        setSong(latest ? `${latest.title} - ${latest.artist}` : "");
+
+    } catch (error) {
+        console.error("프로필 조회 실패:", error);
+    }
+  };
 
     const handleClickEditIcon = () => fileInputRef.current?.click();
     
@@ -31,7 +74,7 @@ function Profile() {
         alert("저장되었습니다!");
     };
 
-    const displayImageSrc = previewUrl || defaultProfileImg;
+    const displayImageSrc = previewUrl || profileImageUrl || profile;
 
     return (
         <section className="profile-section">
@@ -41,7 +84,7 @@ function Profile() {
                     <button className="edit-icon" onClick={handleClickEditIcon}>✎</button>
                     <input type="file" accept="image/*" ref={fileInputRef} style={{ display: 'none' }} onChange={handleFileChange} />
                 </div>
-                <h2 className="profile-nickname">백다혜#2342</h2>
+                <h2 className="profile-nickname">{nickname}</h2>
                 <button className="profile-save-btn" onClick={handleSave}>프로필 저장</button>
             </div>
 

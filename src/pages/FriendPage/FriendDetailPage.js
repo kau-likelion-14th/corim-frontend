@@ -109,7 +109,7 @@ function FriendDetailPage() {
   const friend = profile.value ? {
     name : profile.value.username.split("#")[0],
     bio : profile.value.introduction,
-    profileIamge : profile.value.profileImageUrl,
+    profileImage : profile.value.profileImageUrl,
   }: null;
 
   const todos = (todoResource.value || []).map ((todo) =>({
@@ -198,7 +198,7 @@ function FriendDetailPage() {
         </div>
       </div>
     </div>
-  );
+  );  
 }
 
 function UserIcon() {
