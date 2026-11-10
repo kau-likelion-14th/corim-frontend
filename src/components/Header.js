@@ -54,7 +54,7 @@ function Header(){
 
             {/*메뉴*/}
             <nav className="header-nav">
-                <NavLink to="/home" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+                <NavLink to="/" end className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
                     홈
                 </NavLink>
 
