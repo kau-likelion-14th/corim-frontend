@@ -13,14 +13,14 @@ import FriendDetailPage from './pages/FriendPage/FriendDetailPage';
 
 
 function App() {
-  const location = useLocation(); // 브라우저의 현재 주소 정보를 가져오고 주소창 값이 바뀔때마다 화면을 재렌더링
+  const location = useLocation(); 
   const isLoginPage = 
     location.pathname === '/login'||
-    location.pathname === '/login/oauth2/code/kakao'; // 현재 주소가 /login 인지 확인하고 True/False값 저장
+    location.pathname === '/login/oauth2/code/kakao'; 
 
-  return ( //화면에 띄울 컴포넌트들
+  return ( 
     <div className="app-container"> 
-      {!isLoginPage && <Header/>} {/* 로그인 페이지면 헤더 안뜨게, isLoginPage가 False(현재주소 login아님)일때만 헤더 뜨게*/}
+      {!isLoginPage && <Header/>} 
 
       <main className="main-content">
         <Routes>
@@ -28,7 +28,7 @@ function App() {
           <Route path='/login/oauth2/code/kakao' element={<LoginPage />}/>
           <Route element={<ProtectedRoute />}>
             <Route path="/home" element={<Navigate to="/" replace />} />
-            <Route path="/" element={<MainPage/>} /> {/* 기본 화면이 로그인화면이 뜨게 */}
+            <Route path="/" element={<MainPage/>} /> 
             <Route path='/mypage' element={<MyPage />}/>
             <Route path="/friends" element={<FriendPage />} />
             <Route path="/friends/:id" element={<FriendDetailPage />} /> 
@@ -36,7 +36,7 @@ function App() {
         </Routes>
       </main>
 
-      {!isLoginPage && <Footer/>} {/* 헤더와 마찬가지로 로그인 페이지면 푸터 안뜨게 함*/}
+      {!isLoginPage && <Footer/>} 
     </div>
   );
 }
