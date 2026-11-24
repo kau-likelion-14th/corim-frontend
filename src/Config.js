@@ -26,7 +26,7 @@ const config = {
         INTRO: "/api/profile/intro",
     },
 
-    CALENDAR: {
+        CALENDAR: {
         GET: "/api/todos/calendar",
     },
 
@@ -40,6 +40,15 @@ const config = {
         GET: "/api/categories",
     },
 
+    STATISTICS: {
+        GET: "/api/statistic",
+    },
+
+    YOUTUBE:{
+        SEARCH:"/api/youtube/search",
+        SAVE: "/api/youtube/save",
+        ME: "/api/youtube/me",
+    },
     
 
 };
