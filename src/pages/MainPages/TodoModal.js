@@ -12,7 +12,7 @@ const TodoModal = ({
 }) => {
     const isEditMode = Boolean(initialTodo); 
 
-    const [category, setCategory] = useState("공부"); 
+    const [category, setCategory] = useState("");
     const [text, setText] = useState("");
     const [routine, setRoutine] = useState(null);
 
@@ -21,10 +21,13 @@ const TodoModal = ({
     useEffect(() => {
         if (!isOpen) return;
 
-        setCategory(initialTodo?.category || "공부");
+        setCategory(initialTodo?.category || "");
         setText(initialTodo?.text || "");
         setRoutine(initialTodo?.routine || null);
     }, [isOpen, initialTodo]);
+
+    const categoryKeys = Object.keys(categories);
+    const selectedCategory = category || categoryKeys[0] || "";
 
     if (!isOpen) return null;
 
@@ -33,12 +36,12 @@ const TodoModal = ({
 
         onSave({ 
             text: text.trim(), 
-            category,
+            category: selectedCategory,
             routine,
         });
     };
 
-    const categoryKeys = Object.keys(categories);
+    
 
     return (
         <div className="modal-overlay" onClick={onClose}> 
@@ -55,14 +58,14 @@ const TodoModal = ({
                         {categoryKeys.map((c) => (
                             <label
                                 key={c}
-                                className={`modal-categoryitem ${category === c ? 'selected' : ''}`}
+                                className={`modal-categoryitem ${selectedCategory === c ? 'selected' : ''}`}
                             >
                                 <span style={categories[c]}>{c}</span> 
                                 <input
                                     type="radio"
                                     name="category"
                                     value={c}
-                                    checked={category === c}
+                                    checked={selectedCategory === c}
                                     onChange={() => setCategory(c)}
                                 />
                             </label>

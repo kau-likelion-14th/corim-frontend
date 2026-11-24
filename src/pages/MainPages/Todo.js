@@ -1,124 +1,207 @@
-import React, {useMemo, useState} from "react";
+import React, { useEffect, useState } from "react";
+import { get, patch } from "../../Api";
+import config from "../../Config";
 import "../../styles/Todo.css";
 import TodoModal from "./TodoModal";
 
-const uid = () => Date.now() + Math.random();
-
-const Categories = { // 카테고리별 디자인 설정 (배경색과 글자색)
-    공부: { backgroundColor: '#E5F8F1', color: '#333' },
-    운동: { backgroundColor: '#FFC8BE', color: '#333' },
-    동아리: { backgroundColor: '#B6DAFF', color: '#333' },
+const categoryStyles = {
+    공부: { backgroundColor: "#E5F8F1", color: "#333" },
+    운동: { backgroundColor: "#FFC8BE", color: "#333" },
+    동아리: { backgroundColor: "#B6DAFF", color: "#333" },
 };
 
-    const toDateKey = (date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
+const defaultCategoryStyle = { backgroundColor: "#eee", color: "#333" };
+
+const toDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
 };
 
-const Todo = ({ selectedDate, todosByDate, setTodosByDate }) => {
+const Todo = ({
+    selectedDate,
+    todosByDate,
+    setTodosByDate,
+    onCompletionChange,
+}) => {
     const dateKey = toDateKey(selectedDate);
+    const todos = todosByDate[dateKey] ?? [];
 
-    const todos = todosByDate[dateKey] ?? []; // 해당 날짜의 할 일 목록을 가져오되, 데이터가 없으면 빈 배열([])로 처리
+    const [serverCategories, setServerCategories] = useState({});
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingTodo, setEditingTodo] = useState(null);
+    const [savingId, setSavingId] = useState(null);
 
-    const setTodos = (updater) => {
-        setTodosByDate((prev) => {
-            const current = prev[dateKey] ?? []; // 현재 날짜의 할 일, ?? []를 붙여줌으로써, 데이터가 없는 날짜라도 **"일단 빈 상자([])를 하나 준비해줘"**라고 명령하는 것입니다. 덕분에 에러 없이 새 할 일을 그 상자에 담을 수 있
-            const nextTodos = typeof updater === "function" ? updater(current) : updater; // 업데이트 방식이 함수면 실행하고, 아니면 값 그대로 사용
-            return { ...prev, [dateKey]: nextTodos }; // 기존 데이터(...prev)는 유지하고, 현재 날짜의 데이터만 새것으로 교체
-        });
+    // 카테고리 목록을 조회해서 모달에서 사용하는 { 이름: 스타일 } 형태로 변환
+    useEffect(() => {
+        const controller = new AbortController();
+
+        async function fetchCategories() {
+            try {
+                const response = await get(
+                    config.CATEGORIES.GET,
+                    {},
+                    { signal: controller.signal }
+                );
+
+                if (!Array.isArray(response.result)) {
+                    throw new Error("카테고리 목록 형식을 확인해 주세요.");
+                }
+
+                const categories = Object.fromEntries(
+                    response.result.map(({ categoryName }) => [
+                        categoryName,
+                        categoryStyles[categoryName] ?? defaultCategoryStyle,
+                    ])
+                );
+
+                setServerCategories(categories);
+            } catch (error) {
+                if (!controller.signal.aborted) {
+                    console.error("카테고리 조회 실패", error);
+                }
+            }
+        }
+
+        fetchCategories();
+        return () => controller.abort();
+    }, []);
+
+    const updateTodos = (updater) => {
+        setTodosByDate((prev) => ({
+            ...prev,
+            [dateKey]: updater(prev[dateKey] ?? []),
+        }));
     };
 
-    const [isModalOpen, setIsModalOpen] = useState(false); // 모달이 열렸는지 여부
-    const [editingTodo, setEditingTodo] = useState(null); // 지금 수정 중인 할 일 정보 (새로 만들 때는 null)
-
-    const openModal = () => { // [+] 버튼 눌렀을 때 (새로 만들기)
-        setEditingTodo(null);
-        setIsModalOpen(true);
-    };
-
-    const openEditModal = (todo) => { // 이미 있는 할 일을 클릭했을 때 (수정하기)
+    const openModal = (todo = null) => {
         setEditingTodo(todo);
         setIsModalOpen(true);
     };
 
-    const TodoCompleted = (id) => { // 체크박스 클릭 시 완료 상태 토글 (true <-> false)
-        setTodos((prev) =>
-            prev.map((t) =>
-                t.id === id ? { ...t, completed: !t.completed } : t
-            )
-        );
-    };
+    const handleToggleComplete = async (todo) => {
+        if (savingId !== null) return;
 
-    const handledSaveTodo = ({text, category}) => { // 저장 버튼 클릭 시 (수정 또는 추가)
-        if (editingTodo) { // 1. 수정 모드일 때
-            setTodos((prev) =>
-                prev.map((t) => 
-                    t.id === editingTodo.id 
-                        ? { ...t, text, category } 
-                        : t
+        // 모달에서 임시로 추가한 항목에는 서버의 todoId가 없음
+        if (todo.localOnly) {
+            updateTodos((current) =>
+                current.map((item) =>
+                    item.id === todo.id
+                        ? { ...item, completed: !item.completed }
+                        : item
                 )
             );
-        } else { // 2. 새로 추가 모드일 때
-            setTodos((prev) => [
-                  ...prev, // ← "기존에 있던 애들 다 데리고 와!" (복사)
-                { id: uid(), text, category, completed: false },
-            ]);
+            return;
         }
+
+        setSavingId(todo.id);
+
+        try {
+            const response = await patch(
+                config.TODOS.TOGGLE_COMPLETE(todo.id, dateKey),
+                { completed: !todo.completed }
+            );
+
+            if (!response.isSuccess) {
+                throw new Error(response.message || "완료 상태 변경 실패");
+            }
+        } catch (error) {
+            console.error("Todo 완료 상태 변경 실패", error);
+            window.alert("완료 상태를 저장하지 못했어요. 다시 시도해 주세요.");
+            return;
+        } finally {
+            setSavingId(null);
+        }
+
+        // MainPage의 refreshKey를 변경해 목록과 달력을 다시 조회
+        onCompletionChange();
+    };
+
+    const handleSaveTodo = ({ text, category }) => {
+        if (editingTodo) {
+            updateTodos((current) =>
+                current.map((todo) =>
+                    todo.id === editingTodo.id
+                        ? { ...todo, text, category }
+                        : todo
+                )
+            );
+        } else {
+            const newTodo = {
+                id: `local-${Date.now()}`,
+                text,
+                category,
+                completed: false,
+                localOnly: true,
+            };
+            updateTodos((current) => [...current, newTodo]);
+        }
+
         setIsModalOpen(false);
     };
 
-    const handledDeleteTodo = () => { // 삭제 버튼 클릭 시
+    const handleDeleteTodo = () => {
         if (!editingTodo) return;
-        setTodos((prev) => prev.filter((t) => t.id !== editingTodo.id));
+
+        updateTodos((current) =>
+            current.filter((todo) => todo.id !== editingTodo.id)
+        );
         setIsModalOpen(false);
     };
-
-    const counts = useMemo(() => { //통계 계산
-        const total = todos.length; // 전체 개수
-        const done = todos.filter((t) => t.completed).length; // 완료된 개수
-        return { total, done };
-    }, [todos]);
 
     return (
         <div className="todo-container">
             <div className="todo-header">
                 <div className="todo-title">To do List</div>
-                <button className="todo-add" onClick={openModal}>+</button> 
+                <button
+                    type="button"
+                    className="todo-add"
+                    aria-label="할 일 추가하기"
+                    onClick={() => openModal()}
+                >
+                    +
+                </button>
             </div>
+
             <div className="todo-list">
-                {todos.map((t) => (
-                    <div 
-                        key={t.id} 
-                        className={`todo-item ${t.completed ? 'done' : ''}`}
-                        onClick={() => openEditModal(t)}
+                {todos.map((todo) => (
+                    <div
+                        key={todo.id}
+                        className={`todo-item ${todo.completed ? "done" : ""}`}
+                        onClick={() => openModal(todo)}
                     >
-                        <button 
-                            className={`checkbox ${t.completed ? 'checked' : ''}`} 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                TodoCompleted(t.id);
+                        <button
+                            type="button"
+                            className={`checkbox ${todo.completed ? "checked" : ""}`}
+                            aria-label={`${todo.text} 완료`}
+                            aria-pressed={todo.completed}
+                            disabled={savingId !== null}
+                            onClick={(event) => {
+                                event.stopPropagation();
+                                handleToggleComplete(todo);
                             }}
-                        >
-                        </button>
-                        <div className="todo-text">{t.text}</div>
-                        <div 
+                        />
+
+                        <div className="todo-text">{todo.text}</div>
+
+                        <div
                             className="todo-category"
-                            style={Categories[t.category]}
+                            style={categoryStyles[todo.category] ?? defaultCategoryStyle}
                         >
-                            {t.category}
+                            {todo.category}
                         </div>
                     </div>
                 ))}
             </div>
-            <TodoModal 
+
+            <TodoModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                onSave={handledSaveTodo}
-                onDelete={handledDeleteTodo}
+                onSave={handleSaveTodo}
+                onDelete={handleDeleteTodo}
                 initialTodo={editingTodo}
-                categories={Categories}
+                categories={serverCategories}
             />
         </div>
     );

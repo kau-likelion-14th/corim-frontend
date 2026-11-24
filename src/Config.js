@@ -26,6 +26,29 @@ const config = {
         INTRO: "/api/profile/intro",
     },
 
+        CALENDAR: {
+        GET: "/api/todos/calendar",
+    },
+
+    TODOS: {
+        LIST: "/api/todos",
+        TOGGLE_COMPLETE: (todoId, date) =>
+            `/api/todos/${todoId}/dates/${date}/complete`,
+    },
+
+    CATEGORIES: {
+        GET: "/api/categories",
+    },
+
+    STATISTICS: {
+        GET: "/api/statistic",
+    },
+
+    YOUTUBE:{
+        SEARCH:"/api/youtube/search",
+        SAVE: "/api/youtube/save",
+        ME: "/api/youtube/me",
+    },
     
 
 };
