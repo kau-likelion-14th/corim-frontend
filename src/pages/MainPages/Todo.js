@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { get, patch } from "../../Api";
+import { get, post, put, patch, del } from "../../Api";
 import config from "../../Config";
 import "../../styles/Todo.css";
 import TodoModal from "./TodoModal";
@@ -12,6 +12,8 @@ const categoryStyles = {
 
 const defaultCategoryStyle = { backgroundColor: "#eee", color: "#333" };
 
+const WEEKS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
 const toDateKey = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -19,10 +21,24 @@ const toDateKey = (date) => {
     return `${year}-${month}-${day}`;
 };
 
+const getErrorMessage = (error, fallback) =>
+    error.response?.data?.message || fallback;
+
+const toRoutine = (detail) => {
+    if (!detail.routineEnabled) return null;
+
+    const repeatDays = WEEKS.indexOf(detail.week);
+
+    return {
+        startDate: detail.startDate ?? "",
+        endDate: detail.endDate ?? "",
+        repeatDays: repeatDays >= 0 ? repeatDays : null,
+    };
+};
+
 const Todo = ({
     selectedDate,
     todosByDate,
-    setTodosByDate,
     onCompletionChange,
 }) => {
     const dateKey = toDateKey(selectedDate);
@@ -32,8 +48,8 @@ const Todo = ({
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTodo, setEditingTodo] = useState(null);
     const [savingId, setSavingId] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // 카테고리 목록을 조회해서 모달에서 사용하는 { 이름: 스타일 } 형태로 변환
     useEffect(() => {
         const controller = new AbortController();
 
@@ -68,32 +84,40 @@ const Todo = ({
         return () => controller.abort();
     }, []);
 
-    const updateTodos = (updater) => {
-        setTodosByDate((prev) => ({
-            ...prev,
-            [dateKey]: updater(prev[dateKey] ?? []),
-        }));
-    };
+    const openModal = async (todo = null) => {
+        if (!todo) {
+            setEditingTodo(null);
+            setIsModalOpen(true);
+            return;
+        }
 
-    const openModal = (todo = null) => {
-        setEditingTodo(todo);
-        setIsModalOpen(true);
+        try {
+            const response = await get(config.TODOS.DETAIL(todo.id));
+
+            if (!response.isSuccess || !response.result) {
+                throw new Error(response.message || "할 일 상세 조회 실패");
+            }
+
+            const detail = response.result;
+
+            setEditingTodo({
+                id: detail.todoId,
+                text: detail.description,
+                category: detail.categoryName,
+                routineEnabled: detail.routineEnabled,
+                routine: toRoutine(detail),
+            });
+            setIsModalOpen(true);
+        } catch (error) {
+            console.error("Todo 상세 조회 실패", error);
+            window.alert(
+                getErrorMessage(error, "할 일 정보를 불러오지 못했어요. 다시 시도해 주세요.")
+            );
+        }
     };
 
     const handleToggleComplete = async (todo) => {
         if (savingId !== null) return;
-
-        // 모달에서 임시로 추가한 항목에는 서버의 todoId가 없음
-        if (todo.localOnly) {
-            updateTodos((current) =>
-                current.map((item) =>
-                    item.id === todo.id
-                        ? { ...item, completed: !item.completed }
-                        : item
-                )
-            );
-            return;
-        }
 
         setSavingId(todo.id);
 
@@ -114,40 +138,81 @@ const Todo = ({
             setSavingId(null);
         }
 
-        // MainPage의 refreshKey를 변경해 목록과 달력을 다시 조회
         onCompletionChange();
     };
 
-    const handleSaveTodo = ({ text, category }) => {
-        if (editingTodo) {
-            updateTodos((current) =>
-                current.map((todo) =>
-                    todo.id === editingTodo.id
-                        ? { ...todo, text, category }
-                        : todo
-                )
-            );
-        } else {
-            const newTodo = {
-                id: `local-${Date.now()}`,
-                text,
-                category,
-                completed: false,
-                localOnly: true,
-            };
-            updateTodos((current) => [...current, newTodo]);
-        }
+    const toRequestBody = ({ text, category, routine }) => {
+        const routineEnabled = Boolean(routine);
 
-        setIsModalOpen(false);
+        return {
+            categoryName: category,
+            description: text,
+            routineEnabled,
+            startDate: routineEnabled ? routine.startDate || dateKey : null,
+            endDate: routineEnabled ? routine.endDate || null : null,
+            week: routineEnabled ? WEEKS[routine.repeatDays] ?? null : null,
+        };
     };
 
-    const handleDeleteTodo = () => {
-        if (!editingTodo) return;
+    const handleSaveTodo = async (form) => {
+        if (isSubmitting) return;
 
-        updateTodos((current) =>
-            current.filter((todo) => todo.id !== editingTodo.id)
-        );
-        setIsModalOpen(false);
+        const body = toRequestBody(form);
+
+        if (editingTodo && editingTodo.routineEnabled !== body.routineEnabled) {
+            window.alert("일반 할 일과 루틴은 서로 바꿀 수 없어요.");
+            return;
+        }
+
+        setIsSubmitting(true);
+
+        try {
+            const response = editingTodo
+                ? await put(config.TODOS.UPDATE(editingTodo.id), body)
+                : await post(config.TODOS.CREATE, body, {
+                    params: { date: dateKey },
+                });
+
+            if (!response.isSuccess) {
+                throw new Error(response.message || "할 일 저장 실패");
+            }
+
+            setIsModalOpen(false);
+            onCompletionChange();
+        } catch (error) {
+            console.error("Todo 저장 실패", error);
+            window.alert(
+                getErrorMessage(error, "할 일을 저장하지 못했어요. 다시 시도해 주세요.")
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleDeleteTodo = async () => {
+        if (!editingTodo || isSubmitting) return;
+
+        setIsSubmitting(true);
+
+        try {
+            const response = await del(
+                config.TODOS.DELETE(editingTodo.id, dateKey)
+            );
+
+            if (!response.isSuccess) {
+                throw new Error(response.message || "할 일 삭제 실패");
+            }
+
+            setIsModalOpen(false);
+            onCompletionChange();
+        } catch (error) {
+            console.error("Todo 삭제 실패", error);
+            window.alert(
+                getErrorMessage(error, "할 일을 삭제하지 못했어요. 다시 시도해 주세요.")
+            );
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -202,6 +267,7 @@ const Todo = ({
                 onDelete={handleDeleteTodo}
                 initialTodo={editingTodo}
                 categories={serverCategories}
+                isSubmitting={isSubmitting}
             />
         </div>
     );
