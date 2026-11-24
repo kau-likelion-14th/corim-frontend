@@ -8,7 +8,8 @@ const TodoModal = ({
     onSave, 
     onDelete, 
     initialTodo,
-    categories
+    categories,
+    isSubmitting = false,
 }) => {
     const isEditMode = Boolean(initialTodo); 
 
@@ -32,7 +33,7 @@ const TodoModal = ({
     if (!isOpen) return null;
 
     const handleSave = () => {
-        if(!text.trim()) return;
+        if (!text.trim() || isSubmitting) return;
 
         onSave({ 
             text: text.trim(), 
@@ -96,16 +97,16 @@ const TodoModal = ({
                 </div>
                 <div className="modal-actions">
                     <button
-                        className={`leftbutton ${isEditMode ? '' : 'disabled'}`}
+                        className={`leftbutton ${isEditMode && !isSubmitting ? '' : 'disabled'}`}
                         onClick={onDelete}
-                        disabled={!isEditMode}
+                        disabled={!isEditMode || isSubmitting}
                     >
                         삭제
                     </button>
                     <button
-                        className={`rightbutton ${text.trim() ? '' : 'disabled'}`}
+                        className={`rightbutton ${text.trim() && !isSubmitting ? '' : 'disabled'}`}
                         onClick={handleSave}
-                        disabled={!text.trim()}
+                        disabled={!text.trim() || isSubmitting}
                     >
                         저장
                     </button>
